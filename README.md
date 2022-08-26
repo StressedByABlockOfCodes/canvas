@@ -5,7 +5,7 @@ git clone https://github.com/StressedByABlockOfCodes/canvas.git
 
 ##### Open the project folder:
 ```
-cd portfolio
+cd canvas
 ```
 
 ##### Install packages and dependencies:
