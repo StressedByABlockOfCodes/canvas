@@ -1,6 +1,15 @@
-# canvas
+### Installation
+```
+git clone https://github.com/StressedByABlockOfCodes/canvas.git
+```
 
-## Project setup
+##### Open the project folder:
+```
+cd portfolio
+```
+
+##### Install packages and dependencies:
+
 ```
 npm install
 ```
@@ -10,15 +19,10 @@ npm install
 npm run serve
 ```
 
-### Compiles and minifies for production
-```
-npm run build
-```
+## Notes
 
-### Lints and fixes files
-```
-npm run lint
-```
+-   Always run `npm install` after pulling new changes
+-   Contributions are welcome
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
