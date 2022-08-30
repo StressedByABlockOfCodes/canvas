@@ -109,6 +109,9 @@ export default {
         > able to rotate the image and text using the slider
         > text can be resized but not optimized
 
+      FIXED:
+        > able to upload the same image file
+
       ####################################################*/
 
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);

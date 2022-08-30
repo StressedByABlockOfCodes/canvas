@@ -8,6 +8,7 @@
       id="dropzoneFile"
       class="dropzoneFile"
       accept="image/*"
+      onclick="this.value=null;"
     />
   </div>
 </template>
