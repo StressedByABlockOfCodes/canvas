@@ -11,7 +11,7 @@
   >
     <div class="items-center justify-center">
       <label for="rotation" class="block mb-2 text-sm font-bold text-gray-800">Rotate</label>
-      <input id="rotation" min="0" max="360" type="range" @input="rotateObject(rotationDegrees)" v-model="rotationDegrees" class="w-1/4 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+      <input id="rotation" min="0" max="360" type="range" @input="draw()" v-model="rotationDegrees" class="w-1/4 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
     </div>
 
     <div class="flex flex-row items-center justify-center gap-x-4">
@@ -62,7 +62,7 @@ export default {
   },
   mounted() {
     this.canvas = document.getElementById("myCanvas");
-    this.context = this.canvas.getContext("2d");
+    this.context = this.canvas.getContext("2d");    // two-dimensional rendering context
   },
   methods: {
     async imageFile() {
@@ -76,7 +76,8 @@ export default {
         width: bitmap.width, //calculate width & height
         height: bitmap.height,
         isSelected: false,
-        isDragging: false
+        isDragging: false,
+        rotate: 45
       });
       console.log("width", bitmap.width);
       console.log("height", bitmap.height);
@@ -98,18 +99,30 @@ export default {
       //draw
       this.draw();
     },
+    degreesToRadian(d) {
+      return d * 0.01745;   // One degree is equal to 0.0174533 radians.
+    },
     draw() {
+      /*####################################################
+
+      UPDATE: 
+        > able to rotate the image and text using the slider
+        > text can be resized but not optimized
+
+      ####################################################*/
+
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       for (var i = 0; i < this.elements.length; i++) {
           var object = this.elements[i];
-          if(object.type == 'text') {
-            this.context.font = `${object.height} Arial` ;
-            this.context.fillText(object.content, object.x, object.y, object.width, object.height);
-          }
-          else
-            this.context.drawImage(object.content, object.x, object.y, object.width, object.height);
           
+          this.context.save();
           if(object.isSelected || object.isDragging) {
+            this.context.translate(object.x + (object.width/2), object.y + (object.height/2));
+            // this.context.rotate(this.rotationDegrees*Math.PI/180.0);
+            this.context.rotate(this.degreesToRadian(this.rotationDegrees));
+            //after translating, unstranslate
+            this.context.translate(-object.x - (object.width/2), -object.y - (object.height/2));    // the magic line
+
             let imageRight = object.x + object.width;
             let imageBottom = object.type == 'text' ? (object.y - object.height) : (object.y + object.height);
             this.drawDragAnchor(object.x, object.y);     // top-left
@@ -125,11 +138,22 @@ export default {
             this.context.closePath();
             this.context.stroke();
           }
+
+          if(object.type == 'text') {
+            this.context.font = `${object.height}px Arial` ;
+            this.context.fillText(object.content, object.x, object.y, object.width, object.height);
+          }
+          else {
+            this.context.drawImage(object.content, object.x, object.y, object.width, object.height);
+          }
+          
+          this.context.restore();
       }
     },
     drawDragAnchor(x, y) {
       // this.context.fillRect(x, y, 10, 10);
       this.context.beginPath();
+      // arc begins at an angle of 0 radians (0°), and ends at an angle of 2π radians (360°)
       this.context.arc(x, y, this.resizerRadius, 0, this.pi2, false);
       this.context.closePath();
       this.context.fill();
@@ -138,7 +162,7 @@ export default {
       let dx, dy;
 
       let object = this.elements[i];
-      var rr = this.resizerRadius * this.resizerRadius;   //diameter
+      var rr = this.resizerRadius + this.resizerRadius;
       let imageRight = object.x + object.width;
       let imageBottom = object.type == 'text' ? (object.y - object.height) : (object.y + object.height);
        
@@ -172,17 +196,19 @@ export default {
     objectBoundaries(cursorX, cursorY, index) {
       let object = this.elements[index];
       console.log(cursorY, object.y);
-      if (object.type == 'image' && cursorX >= object.x && cursorX <= object.x + object.width && cursorY >= object.y && cursorY <= object.y + object.height) {
+      if (object.type == 'image' && cursorX >= object.x && cursorX <= object.x + object.width && 
+        cursorY >= object.y && cursorY <= object.y + object.height) {
         return true;
       }
-      if (object.type == 'text' && cursorX >= object.x && cursorX <= object.x + object.width && cursorY >= object.y - object.height && cursorY <= object.y) {
+      if (object.type == 'text' && cursorX >= object.x && cursorX <= object.x + object.width && 
+        cursorY >= object.y - object.height && cursorY <= object.y) {
         return true;
       }
       return false;
     },
     handleMouseDown(e) {
       // handle mousedown events
-      // iterate through texts[] and see if the user
+      // iterate through elements[] and see if the user
       // mousedown'ed on one of them
       // If yes, set the selected Text to the index of that text
       e.preventDefault(); //stops the default action of a selected element from happening by a user.
@@ -227,27 +253,28 @@ export default {
         switch (currentObject.draggingResizer) {
           case 0:
               //top-left
-              currentObject.x = this.startX;
-              currentObject.width = imageRight - this.startX;
-              currentObject.y = this.startY;
-              currentObject.height = imageBottom - this.startY;
+              currentObject.x = mouseX;       // changed this.startX and this.startY to mouseX and mouseY
+              currentObject.width = imageRight - mouseX;   
+              currentObject.y = mouseY;
+              currentObject.height = imageBottom - mouseY;
+              console.log(currentObject.width, imageRight, mouseX, imageRight - mouseX);
               break;
           case 1:
               //top-right
-              currentObject.y = this.startY;
-              currentObject.width = this.startX - currentObject.x;
-              currentObject.height = imageBottom - this.startY;
+              currentObject.y = mouseY;
+              currentObject.width = mouseX - currentObject.x;
+              currentObject.height = imageBottom - mouseY;
               break;
           case 2:
               //bottom-right
-              currentObject.width = this.startX - currentObject.x;
-              currentObject.height = this.startY - currentObject.y;
+              currentObject.width = mouseX - currentObject.x;
+              currentObject.height = mouseY - currentObject.y;
               break;
           case 3:
               //bottom-left
-              currentObject.x = this.startX;
-              currentObject.width = imageRight - this.startX;
-              currentObject.height = this.startY - currentObject.y;
+              currentObject.x = mouseX;
+              currentObject.width = imageRight - mouseX;
+              currentObject.height = mouseY - currentObject.y;
               break;
         }
 
@@ -275,7 +302,7 @@ export default {
     },
     handleMouseUp(e) {
       e.preventDefault();
-      this.selected = -1;
+      this.selected = -1;   //not holding the object
       this.elements.forEach(element => {
         element.isDragging = false;
         element.draggingResizer = -1;
@@ -284,20 +311,6 @@ export default {
     },
     handleMouseOut(e) {
       this.handleMouseUp(e);
-    },
-    rotateObject(angle) {
-      const degToRad = (d) => {
-        // Converts degrees to radians  
-        return d * 0.01745;
-      };
-        
-      console.log(angle);
-      // if(this.selected == -1) return;
-      this.context.save();
-      this.context.rotate(degToRad(angle));
-      this.draw();
-      // And restore the context ready for the next loop  
-      this.context.restore();  
     },
   },
 };
